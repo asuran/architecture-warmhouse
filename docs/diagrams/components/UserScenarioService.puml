@@ -1,0 +1,34 @@
+@startuml
+!include <C4/C4_Component>
+
+Container_Boundary(userScenarios, "User Scenarios Service") {
+  Component(apiController, "API Controller", "Go", "Обрабатывает REST-запросы от API Gateway")
+  Component(authClient, "Auth Client", "Go", "Проверяет права пользователя через Auth Service")
+  Component(scenarioEngine, "Scenario Engine", "Go", "Выполняет сценарии по расписанию и событиям")
+  Component(triggerListener, "Trigger Listener", "Go", "Подписан на события (например, телеметрия)")
+  Component(scenarioRepo, "Scenario Repository", "Go", "Хранит сценарии пользователей")
+  Component(commandDispatcher, "Command Dispatcher", "Go", "Отправляет команды управления устройствами")
+}
+
+Container(apiGateway, "API Gateway", "Nginx", "Маршрутизатор входящих HTTP-запросов")
+Container(authService, "Auth Service", "Go", "Аутентификация и роли")
+Container(messageBroker, "Message Broker (RabbitMQ)", "AMQP", "События и команды")
+Container(deviceControl, "Device Control Service", "Go", "Микросервис управления устройствами")
+ContainerDb(scenariosDb, "Scenarios DB", "PostgreSQL", "Хранилище сценариев")
+
+Rel(apiGateway, apiController, "REST/HTTPS")
+Rel(apiController, authClient, "Проверка токена")
+Rel(apiController, scenarioRepo, "Чтение/запись сценариев")
+Rel(apiController, scenarioEngine, "Создание/запуск сценария")
+Rel(scenarioEngine, triggerListener, "Устанавливает подписку")
+Rel(triggerListener, messageBroker, "Подписка на события", "AMQP")
+Rel(triggerListener, scenarioEngine, "Передаёт событие")
+
+Rel(scenarioEngine, commandDispatcher, "Отдаёт команду на выполнение")
+Rel(commandDispatcher, deviceControl, "REST или AMQP")
+
+Rel(scenarioRepo, scenariosDb, "SQL")
+
+Rel(authClient, authService, "JWT проверка")
+
+@enduml

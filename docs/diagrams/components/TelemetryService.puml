@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+
+Container_Boundary(telemetry, "Telemetry Service") {
+  Component(telemetryListener, "Telemetry Listener", "Go", "Получает телеметрию из брокера (RabbitMQ)")
+  Component(telemetryValidator, "Telemetry Validator", "Go", "Проверяет валидность входящих данных")
+  Component(telemetryProcessor, "Telemetry Processor", "Go", "Фильтрация, агрегирование, нормализация")
+  Component(telemetryRepo, "Telemetry Repository", "Go", "Сохраняет данные в TimeSeries БД")
+  Component(telemetryApi, "Telemetry API", "Go", "Предоставляет доступ к текущей/исторической телеметрии по REST")
+  Component(eventPublisher, "Event Publisher", "Go", "Публикует события при аномалиях")
+}
+
+Container(messageBroker, "Message Broker (RabbitMQ)", "AMQP", "Источник телеметрии")
+Container(apiGateway, "API Gateway", "Nginx", "REST-запросы от Web App")
+ContainerDb(telemetryDb, "Telemetry DB", "TimeSeries DB", "Хранилище телеметрии")
+
+Rel(messageBroker, telemetryListener, "AMQP (телеметрия)")
+Rel(telemetryListener, telemetryValidator, "Передаёт данные")
+Rel(telemetryValidator, telemetryProcessor, "Передаёт валидные данные")
+Rel(telemetryProcessor, telemetryRepo, "Сохраняет")
+Rel(telemetryProcessor, eventPublisher, "Генерирует события")
+Rel(eventPublisher, messageBroker, "AMQP (события)")
+
+Rel(apiGateway, telemetryApi, "REST/HTTPS")
+Rel(telemetryApi, telemetryRepo, "Читает текущие и исторические данные")
+
+Rel(telemetryRepo, telemetryDb, "TimeSeries-запись")
+
+@enduml

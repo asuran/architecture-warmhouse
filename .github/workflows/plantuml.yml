@@ -1,0 +1,54 @@
+name: PlantUML Diagrams
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  generate-diagrams:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install PlantUML
+        run: sudo apt-get install -y plantuml
+
+      - name: Set up C4 PlantUML stdlib
+        run: |
+          mkdir -p ~/.plantuml/stdlib/C4
+          curl -sL https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4.puml -o ~/.plantuml/stdlib/C4/C4.puml
+          curl -sL https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml -o ~/.plantuml/stdlib/C4/C4_Context.puml
+          curl -sL https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml -o ~/.plantuml/stdlib/C4/C4_Container.puml
+          curl -sL https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml -o ~/.plantuml/stdlib/C4/C4_Component.puml
+
+      - name: Generate Diagrams
+        run: |
+          find docs/diagrams -name '*.puml'
+          find docs/diagrams -name '*.puml' -exec plantuml -tpng {} \;
+
+      - name: Show PNGs
+        run: find docs/diagrams -name '*.png'
+
+      - name: Commit Diagrams
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add $(find docs/diagrams -name '*.png')
+          
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Automated diagram generation"
+          git push origin ${GITHUB_REF#refs/heads/}
+        if: success()
